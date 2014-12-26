@@ -52,6 +52,7 @@ class Deck():
       self.cards = []
       number -= len(return_value)
       self.shuffle(discard_pile)
+      print 'shuffling'
 
     if len(self.cards) < number:
       # Won't actually throw an error, but still weird so print a message
@@ -82,26 +83,77 @@ class Player():
     self.draw_cards(5)
 
   def draw_cards(self, number):
-    self.hand.append(self.deck.draw(self.discard_pile, number))
+    print 'drawing ', number, ' cards'
+    self.hand.extend(self.deck.draw(self.discard_pile, number))
 
-class Turn():
-  player = None
-  actions_left = 1
-  buys_left = 1
-  money = 0
-  phase = 'action'
+  def buy_card(self, card):
+    self.discard_pile.append(card)
+    
+  def end_turn(self):
+    self.discard_pile.extend(self.hand)
+    self.hand = []
+    self.draw_hand()
+
+class Game():
+  players = []
+  cards = {}
+  trash = []
+  current_turn = {}
+  current_player_index = 0
   
+  def initialize_turn(self):
+    self.current_player_index += 1
+    self.current_player_index %= len(self.players)
+    self.current_turn = {'actions_left':1, 'buys_left':1, 'money': 0, 'player': self.players[self.current_player_index]}
+  
+  def add_card(self, card, quantity = 10):
+    self.cards[card.name] = quantity
+  
+  def is_game_over(self):
+    if self.cards.get('Province') == 0:
+      return True
+    # Now iterate through the cards -- if 3 piles are empty the game is over
+    number_of_empty_piles = 0
+    for name, quantity in self.cards:
+      if quantity == 0:
+        number_of_empty_piles += 1
+        if number_of_empty_piles >= 3:
+          return True
+    return False
+    
   def play_card(self, card):
-  	  if isinstance(card, ActionCard):
-  			  self.actions_left -= 1
-  			  self.actions_left += card.action_increases
-  			  self.buys_left += card.buy_increases
-  			  self.money += card.money_increases
-  			  if card.cards_to_draw > 0:
+    print card
+    if isinstance(card, ActionCard):
+      print 'Playing:', card
+      self.current_turn['actions_left'] -= 1
+      self.current_turn['actions_left'] += card.action_increases
+      self.current_turn['buys_left'] += card.buy_increases
+      self.current_turn['money'] += card.money_increases
+      if card.cards_to_draw > 0:
+  			    self.current_turn['player'].draw_cards(card.cards_to_draw)
+      print self.current_turn
 
     elif isinstance(card, MoneyCard):
-  		   self.money += card.monetary_value
-  		
+  		   self.current_turn['money'] += card.monetary_value
+  		   print self.current_turn['money'], ' money'
+
+  def buy_card(self, card):
+  	  if self.current_turn['buys_left'] > 0:
+  	    if self.current_turn['money'] >= card.cost:
+  	      self.current_turn['buys_left'] -= 1
+  	      print 'Buying ' , card
+  	      self.current_turn['player'].buy_card(card)
+  	    else:
+  	      print 'not enough money'
+  	  else:
+  	    print 'No buys left this turn'
+  	    
+  def end_turn(self):
+  	  self.current_turn['player'].end_turn()
+  	
+  def next_turn(self):
+    self.end_turn()
+    self.initialize_turn()
 
 # Instantiate money cards
 copper = MoneyCard()
@@ -137,7 +189,7 @@ gardens.cost = 4
 gardens.victory_points = 0
 
 #action cards
-village = ActionCard():
+village = ActionCard()
 village.name = 'Village'
 village.cost = 3
 village.action_increases = 2
@@ -161,6 +213,33 @@ player.deck = deck
 player.name = '1'
 player.draw_hand()
 
+game = Game()
+game.players.append(player)
+game.add_card(province, 12)
+game.add_card(village, 10)
+game.initialize_turn()
+
+for card in player.hand:
+  game.play_card(card)
+game.buy_card(silver)
+game.next_turn()
+for card in player.hand:
+  game.play_card(card)
+game.buy_card(village)
+print player.hand
+game.next_turn()
+for card in player.hand:
+  game.play_card(card)
+game.buy_card(village)
+print player.hand
+game.next_turn()
+for card in player.hand:
+  game.play_card(card)
+game.buy_card(village)
+print player.hand
+game.next_turn()
+game.buy_card(village)
+print player.hand
 
 
 # TODO at game end, make sure to shuffle discard pile into deck before computing score
