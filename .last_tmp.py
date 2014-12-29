@@ -144,7 +144,8 @@ class Game():
       self.current_turn['buys_left'] += card.buy_increases
       self.current_turn['money'] += card.money_increases
       if card.cards_to_draw > 0:
-  			    self.current_turn['player'].draw_cards(card.cards_to_draw)
+        self.current_turn['player'].draw_cards(card.cards_to_draw)
+        print 'current hand:', self.current_turn['player'].hand
       print self.current_turn
 
     elif isinstance(card, MoneyCard):
@@ -189,14 +190,19 @@ class Game():
         for i in xrange(len(player.hand)):
           card = player.hand[i]
           if card.name == target:
+            del player.hand[i]
             self.play_card(card)
             # Move the card to the discard pile and remove it from the hand
             # TODO this should probably happen somewhere else
             player.discard_pile.append(card)
-            del player.hand[i]
             break
         else:
           print 'Card not found'
+      elif action == 'show':
+        if target == 'hand':
+          print player.hand
+        elif target == 'board':
+          print self.card_counts
         
 
 # Instantiate money cards
@@ -243,31 +249,30 @@ village.cards_to_draw = 1
 # Set up a normal starting hand: 7 coppers and 3 estates
 player = Player()
 player.name = '1'
+player2 = Player()
+player2.name = '2'
 
 for i in xrange(7):
   player.add_card(copper)
-for i in xrange(3):
-  player.add_card(estate)
-player.deck.shuffle([])
-#player.draw_hand()
-
-player2 = Player()
-player2.name = '2'
-for i in xrange(7):
   player2.add_card(copper)
 for i in xrange(3):
+  player.add_card(estate)
   player2.add_card(estate)
+player.deck.shuffle([])
 player2.deck.shuffle([])
 #player2.draw_hand()
-
-print 'Deck1:', player.deck
-print 'Deck2:', player2.deck
+player.draw_hand()
+player2.draw_hand()
 
 game = Game()
 game.players.append(player)
 game.players.append(player2)
+game.add_card(estate, 50)
+game.add_card(duchy, 15)
 game.add_card(province, 12)
+game.add_card(copper, 50)
 game.add_card(silver, 50)
+game.add_card(gold, 50)
 game.add_card(village, 10)
 game.initialize_turn()
 print player.hand
@@ -281,7 +286,7 @@ print player.hand
 #game.parse_input('end turn')
 
 while True:
-  game.parse_input(raw_input('Enter command'))
+  game.parse_input(raw_input('Enter command\n'))
 
 """
 for card in player.hand:
