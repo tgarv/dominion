@@ -13,12 +13,29 @@ class Card():
 
   def __repr__(self):
     return str(self)
+    
+  def get_details(self):
+    return self.name + '\n' + (str)(self.cost) + 'G'
 
 class ActionCard(Card):
   action_increases = 0
   buy_increases = 0
   money_increases = 0
   cards_to_draw = 0
+  
+  def get_details(self):
+    value = '\n' + self.name + '\n' 
+    if self.action_increases:
+      value += '+' + (str)(self.action_increases) + ' action' + '\n'
+    if self.buy_increases:
+      value += '+' + (str)(self.buy_increases) + ' buy' + '\n'
+    if self.cards_to_draw:
+      value += '+' + (str)(self.cards_to_draw) + ' card' + '\n'
+    if self.money_increases:
+      value += '+' + (str)(self.money_increases) + ' G' + '\n'
+      
+    value += 'Cost: ' + (str)(self.cost) + '\n'
+    return value
 
 class AttackCard(ActionCard):
   def play(self, Turn):
@@ -53,7 +70,7 @@ class Deck():
       return_value = self.cards
       self.cards = []
       number -= len(return_value)
-      self.shuffle(discard_pile)
+      self.shuffle(discard_pile) #TODO need to empty the discard pile
       print 'shuffling'
 
     if len(self.cards) < number:
@@ -128,7 +145,7 @@ class Game():
       return True
     # Now iterate through the cards -- if 3 piles are empty the game is over
     number_of_empty_piles = 0
-    for name, quantity in self.card_counts:
+    for name, quantity in self.card_counts.iteritems():
       if quantity == 0:
         number_of_empty_piles += 1
         if number_of_empty_piles >= 3:
@@ -144,7 +161,8 @@ class Game():
       self.current_turn['buys_left'] += card.buy_increases
       self.current_turn['money'] += card.money_increases
       if card.cards_to_draw > 0:
-  			    self.current_turn['player'].draw_cards(card.cards_to_draw)
+        self.current_turn['player'].draw_cards(card.cards_to_draw)
+        print 'current hand:', self.current_turn['player'].hand
       print self.current_turn
 
     elif isinstance(card, MoneyCard):
@@ -172,10 +190,19 @@ class Game():
     self.initialize_turn()
     
   def parse_input(self, input):
+    print self.is_game_over()
     words = input.split()
     player = self.current_turn['player']
-    if words[0] == 'end':
+    if len(words) and words[0] == 'end':
       self.next_turn()
+      
+    if input == 'all money':
+      for i in xrange(len(player.hand) - 1, -1, -1):
+        card = player.hand[i]
+        if isinstance(card, MoneyCard):
+          self.play_card(card)
+          del player.hand[i]
+          player.discard_pile.append(card)
 
     if len(words) == 2:
       action, target = words
@@ -197,7 +224,13 @@ class Game():
             break
         else:
           print 'Card not found'
-        
+      elif action == 'show':
+        if target == 'hand':
+          print player.hand
+        elif target == 'board':
+          print self.card_counts
+        elif target in self.cards:
+          print self.cards[target].get_details()
 
 # Instantiate money cards
 copper = MoneyCard()
@@ -239,36 +272,52 @@ village.cost = 3
 village.action_increases = 2
 village.cards_to_draw = 1
 
+market = ActionCard()
+market.name = 'Market'
+market.cost = 5
+market.action_increases = 1
+market.cards_to_draw = 1
+market.buy_increases = 1
+market.money_increases = 1
+
+woodcutter = ActionCard()
+woodcutter.name = 'Woodcutter'
+woodcutter.cost = 3
+woodcutter.action_increases = 0
+woodcutter.cards_to_draw = 0
+woodcutter.buy_increases = 1
+woodcutter.money_increases = 2
+
 
 # Set up a normal starting hand: 7 coppers and 3 estates
 player = Player()
 player.name = '1'
+player2 = Player()
+player2.name = '2'
 
 for i in xrange(7):
   player.add_card(copper)
-for i in xrange(3):
-  player.add_card(estate)
-player.deck.shuffle([])
-#player.draw_hand()
-
-player2 = Player()
-player2.name = '2'
-for i in xrange(7):
   player2.add_card(copper)
 for i in xrange(3):
+  player.add_card(estate)
   player2.add_card(estate)
+player.deck.shuffle([])
 player2.deck.shuffle([])
-#player2.draw_hand()
-
-print 'Deck1:', player.deck
-print 'Deck2:', player2.deck
+player.draw_hand()
+player2.draw_hand()
 
 game = Game()
 game.players.append(player)
 game.players.append(player2)
+game.add_card(estate, 50)
+game.add_card(duchy, 15)
 game.add_card(province, 12)
+game.add_card(copper, 50)
 game.add_card(silver, 50)
+game.add_card(gold, 50)
 game.add_card(village, 10)
+game.add_card(market, 10)
+game.add_card(woodcutter, 10)
 game.initialize_turn()
 print player.hand
 #game.parse_input('play Copper')
@@ -281,7 +330,7 @@ print player.hand
 #game.parse_input('end turn')
 
 while True:
-  game.parse_input(raw_input('Enter command'))
+  game.parse_input(raw_input('Enter command\n'))
 
 """
 for card in player.hand:
