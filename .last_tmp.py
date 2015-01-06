@@ -216,11 +216,11 @@ class Game():
         for i in xrange(len(player.hand)):
           card = player.hand[i]
           if card.name == target:
+            del player.hand[i]
             self.play_card(card)
             # Move the card to the discard pile and remove it from the hand
             # TODO this should probably happen somewhere else
             player.discard_pile.append(card)
-            del player.hand[i]
             break
         else:
           print 'Card not found'
@@ -303,6 +303,10 @@ for i in xrange(3):
   player2.add_card(estate)
 player.deck.shuffle([])
 player2.deck.shuffle([])
+<<<<<<< HEAD
+=======
+#player2.draw_hand()
+>>>>>>> branch 'master' of https://github.com/tgarv/dominion.git
 player.draw_hand()
 player2.draw_hand()
 
