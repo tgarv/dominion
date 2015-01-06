@@ -176,7 +176,7 @@ class Game():
   	      print 'Buying ' , card
   	      self.current_turn['player'].buy_card(card)
   	      self.card_counts[card.name] -= 1
-  	      self.current_turn['money' -= card.cost
+  	      self.current_turn['money'] -= card.cost
   	    else:
   	      print 'not enough money'
   	  else:
@@ -304,10 +304,6 @@ for i in xrange(3):
   player2.add_card(estate)
 player.deck.shuffle([])
 player2.deck.shuffle([])
-<<<<<<< HEAD
-=======
-#player2.draw_hand()
->>>>>>> branch 'master' of https://github.com/tgarv/dominion.git
 player.draw_hand()
 player2.draw_hand()
 
