@@ -42,18 +42,14 @@ class AttackCard(ActionCard):
     ActionCard.play(self, Turn)
     # Special Attack logic here
 
-class MoneyCard(Card):
+class TreasureCard(Card):
   monetary_value = 0
 
 class VictoryCard(Card):
   victory_points = 0
 
-  def get_score(self):
-			return self.victory_points
-
-class GardensCard(VictoryCard):
-	def get_score(self, deck_length):
-		return deck_length/10  		
+  def get_victory_points(self):
+			return self.victory_points		
 
 class Deck():
   def __init__(self):
@@ -88,7 +84,7 @@ class Deck():
     score = 0
     for card in self.cards:
       if isinstance(card, VictoryCard):
-        score += card.get_score()
+        score += card.get_victory_points()
 
     return score
 
@@ -165,7 +161,7 @@ class Game():
         print 'current hand:', self.current_turn['player'].hand
       print self.current_turn
 
-    elif isinstance(card, MoneyCard):
+    elif isinstance(card, TreasureCard):
   		   self.current_turn['money'] += card.monetary_value
   		   print self.current_turn['money'], ' money'
 
@@ -200,7 +196,7 @@ class Game():
     if input == 'all money':
       for i in xrange(len(player.hand) - 1, -1, -1):
         card = player.hand[i]
-        if isinstance(card, MoneyCard):
+        if isinstance(card, TreasureCard):
           self.play_card(card)
           del player.hand[i]
           player.discard_pile.append(card)
@@ -233,61 +229,84 @@ class Game():
         elif target in self.cards:
           print self.cards[target].get_details()
 
-# Instantiate money cards
-copper = MoneyCard()
-copper.cost = 0
-copper.name = 'Copper'
-copper.monetary_value = 1
-silver = MoneyCard()
-silver.cost = 3
-silver.name = 'Silver'
-silver.monetary_value = 2
-gold = MoneyCard()
-gold.cost = 6
-gold.name = 'Gold'
-gold.monetary_value = 3
+# Treasure Cards
+class CopperCard(TreasureCard):
+  cost = 0
+  name = 'Copper'
+  monetary_value = 1
 
-# Instantiate victory cards
-estate = VictoryCard()
-estate.name = 'Estate'
-estate.victory_points = 1
-estate.cost = 2
-duchy = VictoryCard()
-duchy.name = 'Duchy'
-duchy.victory_points = 3
-duchy.cost = 5
-province = VictoryCard()
-province.name = 'Province'
-province.victory_points = 6
-province.cost = 8
-# TODO Gardens has a special function to compute its VP
-gardens = VictoryCard()
-gardens.name = 'Gardens'
-gardens.cost = 4
-gardens.victory_points = 0
+class SilverCard(TreasureCard):
+  cost = 3
+  name = 'Silver'
+  monetary_value = 2
+
+class GoldCard(TreasureCard):
+  cost = 6
+  name = 'Gold'
+  monetary_value = 3
+
+# Victory Cards
+class EstateCard(VictoryCard):
+  name = 'Estate'
+  victory_points = 1
+  cost = 2
+
+class DuchyCard(VictoryCard):
+  name = 'Duchy'
+  victory_points = 3
+  cost = 5
+
+class ProvinceCard(VictoryCard):
+  name = 'Province'
+  victory_points = 6
+  cost = 8
+
+class GardensCard(VictoryCard):
+  name = 'Gardens'
+  victory_points = 0
+  cost = 4
+
+  def get_victory_points(self, deck):
+    return len(deck.cards)/10
 
 #action cards
-village = ActionCard()
-village.name = 'Village'
-village.cost = 3
-village.action_increases = 2
-village.cards_to_draw = 1
+class VillageCard(ActionCard):
+  name = 'Village'
+  cost = 3
+  action_increases = 2
+  cards_to_draw = 1
 
-market = ActionCard()
-market.name = 'Market'
-market.cost = 5
-market.action_increases = 1
-market.cards_to_draw = 1
-market.buy_increases = 1
-market.money_increases = 1
+class MarketCard(ActionCard):
+  name = 'Market'
+  cost = 5
+  action_increases = 1
+  cards_to_draw = 1
+  buy_increases = 1
+  money_increases = 1
 
-woodcutter = ActionCard()
-woodcutter.name = 'Woodcutter'
-woodcutter.cost = 3
-woodcutter.action_increases = 0
-woodcutter.cards_to_draw = 0
-woodcutter.buy_increases = 1
-woodcutter.money_increases = 2
+class WoodcutterCard(ActionCard):
+  name = 'Woodcutter'
+  cost = 3
+  action_increases = 0
+  cards_to_draw = 0
+  buy_increases = 1
+  money_increases = 2
+
+# Instantiate money cards
+copper = CopperCard()
+silver = SilverCard()
+gold = GoldCard()
+
+# Instantiate victory cards
+estate = EstateCard()
+duchy = DuchyCard()
+province = ProvinceCard()
+garden = GardensCard()
+
+# Instantiate action cards
+village = VillageCard()
+woodcutter = WoodcutterCard()
+market = MarketCard()
 
 
 # Set up a normal starting hand: 7 coppers and 3 estates
