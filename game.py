@@ -1,5 +1,5 @@
 #qpy:console
-from random import shuffle
+from random import shuffle, randint
 
 class Card():
   name = ''
@@ -49,7 +49,7 @@ class VictoryCard(Card):
   victory_points = 0
 
   def get_victory_points(self):
-			return self.victory_points		
+      return self.victory_points    
 
 class Deck():
   def __init__(self):
@@ -123,18 +123,44 @@ class Game():
   card_counts = {}
   trash = []
   current_turn = {}
-  current_player_index = 0
-  
+  current_player_index = -1
+  current_player = None
+
+  def start_game(self, players):
+    number_of_starting_estates = 3
+    number_of_starting_coppers = 7
+    self.players = players
+    for player in self.players:
+      for i in xrange(number_of_starting_estates):
+        estate = self.cards['Estate'].pop()
+        player.add_card(estate)
+      for i in xrange(number_of_starting_coppers):
+        copper = self.cards['Copper'].pop()
+        player.add_card(copper)
+      self.card_counts['Estate'] -= number_of_starting_estates
+      self.card_counts['Copper'] -= number_of_starting_coppers
+      player.deck.shuffle([])
+      player.draw_hand()
+
+    # Random starting player
+    self.current_player_index = randint(0, len(self.players))
+    self.initialize_turn()
+
   def initialize_turn(self):
     self.current_player_index += 1
     self.current_player_index %= len(self.players)
-    self.current_turn = {'actions_left':1, 'buys_left':1, 'money': 0, 'player': self.players[self.current_player_index]}
-    print 'Starting new turn. Player ' + self.current_turn['player'].name + '\'s turn'
-    print 'Current hand: ', self.current_turn['player'].hand
+    self.current_turn = {'actions_left':1, 'buys_left':1, 'money': 0}
+    self.current_player = self.players[self.current_player_index]
+    print 'Starting new turn. Player ' + self.current_player.name + '\'s turn'
+    print 'Current hand: ', self.current_player.hand
   
-  def add_card(self, card, quantity = 10):
+  def add_card(self, card_constructor, quantity = 10):
+    cards = []
+    card = card_constructor()
+    for i in xrange(quantity):
+      cards.append(card_constructor())
     self.card_counts[card.name] = quantity
-    self.cards[card.name] = card
+    self.cards[card.name] = cards
   
   def is_game_over(self):
     if self.card_counts.get('Province') == 0:
@@ -157,31 +183,33 @@ class Game():
       self.current_turn['buys_left'] += card.buy_increases
       self.current_turn['money'] += card.money_increases
       if card.cards_to_draw > 0:
-        self.current_turn['player'].draw_cards(card.cards_to_draw)
-        print 'current hand:', self.current_turn['player'].hand
+        self.current_player.draw_cards(card.cards_to_draw)
+        print 'current hand:', self.current_player.hand
       print self.current_turn
 
     elif isinstance(card, TreasureCard):
-  		   self.current_turn['money'] += card.monetary_value
-  		   print self.current_turn['money'], ' money'
+      self.current_turn['money'] += card.monetary_value
+      print self.current_turn['money'], ' money'
 
   def buy_card(self, card):
-  	  if self.current_turn['buys_left'] > 0:
-  	    if self.current_turn['money'] >= card.cost:
-  	      self.current_turn['buys_left'] -= 1
-  	      print 'Buying ' , card
-  	      self.current_turn['player'].buy_card(card)
-  	      self.card_counts[card.name] -= 1
-  	      self.current_turn['money'] -= card.cost
-  	    else:
-  	      print 'not enough money'
-  	  else:
-  	    print 'No buys left this turn'
-  	  print self.card_counts
-  	    
+      if self.current_turn['buys_left'] > 0:
+        if self.current_turn['money'] >= card.cost:
+          self.current_turn['buys_left'] -= 1
+          print 'Buying ' , card
+          self.cards[card.name].pop()   # This is where the copy of the card actually gets removed from the hand
+          print len(self.cards[card.name])
+          self.current_player.buy_card(card)
+          self.card_counts[card.name] -= 1
+          self.current_turn['money'] -= card.cost
+        else:
+          print 'not enough money'
+      else:
+        print 'No buys left this turn'
+      print self.card_counts
+        
   def end_turn(self):
-  	  self.current_turn['player'].end_turn()
-  	
+      self.current_player.end_turn()
+    
   def next_turn(self):
     self.end_turn()
     self.initialize_turn()
@@ -189,7 +217,7 @@ class Game():
   def parse_input(self, input):
     print self.is_game_over()
     words = input.split()
-    player = self.current_turn['player']
+    player = self.current_player
     if len(words) and words[0] == 'end':
       self.next_turn()
       
@@ -204,11 +232,13 @@ class Game():
     if len(words) == 2:
       action, target = words
       if action == 'buy':
-        card = self.cards.get(target, None)
-        if card:
-          self.buy_card(card)
-        else:
-          print 'Invalid card: ', target
+        cards = self.cards.get(target, [])
+        if len(cards):
+          card = cards[0]
+          if card:
+            self.buy_card(card)
+          else:
+            print 'Invalid card: ', target
       elif action == 'play':
         for i in xrange(len(player.hand)):
           card = player.hand[i]
@@ -227,7 +257,9 @@ class Game():
         elif target == 'board':
           print self.card_counts
         elif target in self.cards:
-          print self.cards[target].get_details()
+          cards = self.cards.get(target)
+          if len(cards):
+            print cards[0].get_details()
 
 # Treasure Cards
 class CopperCard(TreasureCard):
@@ -315,65 +347,22 @@ player.name = '1'
 player2 = Player()
 player2.name = '2'
 
-for i in xrange(7):
-  player.add_card(copper)
-  player2.add_card(copper)
-for i in xrange(3):
-  player.add_card(estate)
-  player2.add_card(estate)
-player.deck.shuffle([])
-player2.deck.shuffle([])
-player.draw_hand()
-player2.draw_hand()
-
+# Set up the game, add players, add cards, and start the game
 game = Game()
 game.players.append(player)
 game.players.append(player2)
-game.add_card(estate, 50)
-game.add_card(duchy, 15)
-game.add_card(province, 12)
-game.add_card(copper, 50)
-game.add_card(silver, 50)
-game.add_card(gold, 50)
-game.add_card(village, 10)
-game.add_card(market, 10)
-game.add_card(woodcutter, 10)
-game.initialize_turn()
-print player.hand
-#game.parse_input('play Copper')
-#game.parse_input('play Copper')
-#game.parse_input('play Copper')
-#game.parse_input('play Copper')
-#game.parse_input('play Copper')
-#game.parse_input('buy Village')
-#game.parse_input('end turn')
-#game.parse_input('end turn')
+game.add_card(EstateCard, 50)
+game.add_card(DuchyCard, 15)
+game.add_card(ProvinceCard, 12)
+game.add_card(CopperCard, 50)
+game.add_card(SilverCard, 50)
+game.add_card(GoldCard, 50)
+game.add_card(VillageCard, 10)
+game.add_card(MarketCard, 10)
+game.add_card(WoodcutterCard, 10)
+game.start_game([player, player2])
 
 while True:
   game.parse_input(raw_input('Enter command\n'))
-
-"""
-for card in player.hand:
-  game.play_card(card)
-game.buy_card(silver)
-game.next_turn()
-for card in player.hand:
-  game.play_card(card)
-game.buy_card(silver)
-print player.hand
-game.next_turn()
-for card in player.hand:
-  game.play_card(card)
-game.buy_card(silver)
-print player.hand
-game.next_turn()
-for card in player.hand:
-  game.play_card(card)
-game.buy_card(silver)
-print player.hand
-game.next_turn()
-game.buy_card(silver)
-print player.hand
-"""
 
 # TODO at game end, make sure to shuffle discard pile into deck before computing score
