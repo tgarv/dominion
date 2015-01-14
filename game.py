@@ -66,8 +66,9 @@ class Deck():
       return_value = self.cards
       self.cards = []
       number -= len(return_value)
-      self.shuffle(discard_pile) #TODO need to empty the discard pile
+      self.shuffle(discard_pile)
       print 'shuffling'
+      discard_pile = []
 
     if len(self.cards) < number:
       # Won't actually throw an error, but still weird so print a message
@@ -75,7 +76,7 @@ class Deck():
 
     return_value.extend(self.cards[:number])
     self.cards = self.cards[number:]
-    return return_value
+    return return_value, discard_pile
     
   def add_card(self, card):
     self.cards.append(card)
@@ -103,7 +104,9 @@ class Player():
 
   def draw_cards(self, number):
     print 'drawing ', number, ' cards'
-    self.hand.extend(self.deck.draw(self.discard_pile, number))
+    cards, discard = self.deck.draw(self.discard_pile, number)
+    self.hand.extend(cards)
+    self.discard_pile = discard
     
   def add_card(self, card):
     self.deck.add_card(card)
@@ -117,6 +120,12 @@ class Player():
     self.hand = []
     self.draw_hand()
 
+  # gets the score of the player's Deck plus discard pile plus hand
+  def get_score(self):
+    score_deck = Deck()
+    score_deck.cards = self.deck.cards + self.discard_pile + self.hand
+    return score_deck.get_score()
+
 class Game():
   players = []
   cards = {}
@@ -125,6 +134,7 @@ class Game():
   current_turn = {}
   current_player_index = -1
   current_player = None
+  state = 'active'
 
   def start_game(self, players):
     number_of_starting_estates = 3
@@ -192,26 +202,31 @@ class Game():
       print self.current_turn['money'], ' money'
 
   def buy_card(self, card):
-      if self.current_turn['buys_left'] > 0:
-        if self.current_turn['money'] >= card.cost:
-          self.current_turn['buys_left'] -= 1
-          print 'Buying ' , card
-          self.cards[card.name].pop()   # This is where the copy of the card actually gets removed from the hand
-          print len(self.cards[card.name])
-          self.current_player.buy_card(card)
-          self.card_counts[card.name] -= 1
-          self.current_turn['money'] -= card.cost
-        else:
-          print 'not enough money'
+    if self.current_turn['buys_left'] > 0:
+      if self.current_turn['money'] >= card.cost:
+        self.current_turn['buys_left'] -= 1
+        print 'Buying ' , card
+        self.cards[card.name].pop()   # This is where the copy of the card actually gets removed from the hand
+        print len(self.cards[card.name])
+        self.current_player.buy_card(card)
+        self.card_counts[card.name] -= 1
+        self.current_turn['money'] -= card.cost
       else:
-        print 'No buys left this turn'
-      print self.card_counts
+        print 'not enough money'
+    else:
+      print 'No buys left this turn'
+    print self.card_counts
         
   def end_turn(self):
-      self.current_player.end_turn()
+    self.current_player.end_turn()
+
     
+  # Return True if we should end the game
   def next_turn(self):
     self.end_turn()
+    if self.is_game_over():
+      print 'GAME OVER'
+      self.state = 'ended'
     self.initialize_turn()
     
   def parse_input(self, input):
@@ -261,6 +276,18 @@ class Game():
           if len(cards):
             print cards[0].get_details()
 
+  def get_winner(self):
+    best_player = None
+    best_score = 0
+    for player in self.players:
+      player_score = player.get_score()
+      if player_score > best_score:
+        print 'Player ' + player.name + 'has score ' + str(player_score)
+        best_score = player_score
+        best_player = player
+
+    return best_player
+
 # Treasure Cards
 class CopperCard(TreasureCard):
   cost = 0
@@ -291,7 +318,7 @@ class DuchyCard(VictoryCard):
 class ProvinceCard(VictoryCard):
   name = 'Province'
   victory_points = 6
-  cost = 8
+  cost = 1
 
 class GardensCard(VictoryCard):
   name = 'Gardens'
@@ -353,7 +380,7 @@ game.players.append(player)
 game.players.append(player2)
 game.add_card(EstateCard, 50)
 game.add_card(DuchyCard, 15)
-game.add_card(ProvinceCard, 12)
+game.add_card(ProvinceCard, 1)
 game.add_card(CopperCard, 50)
 game.add_card(SilverCard, 50)
 game.add_card(GoldCard, 50)
@@ -362,7 +389,9 @@ game.add_card(MarketCard, 10)
 game.add_card(WoodcutterCard, 10)
 game.start_game([player, player2])
 
-while True:
+while game.state != 'ended':
   game.parse_input(raw_input('Enter command\n'))
 
+winner = game.get_winner()
+print winner
 # TODO at game end, make sure to shuffle discard pile into deck before computing score
